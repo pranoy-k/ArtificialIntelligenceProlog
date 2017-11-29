@@ -1,0 +1,319 @@
+                       **************************
+                        A Short Course on PROLOG
+                         Dr. Thomas R. Ioerger
+                          (updated: 11/17/16)
+                       **************************
+
+1. Accessing PROLOG
+-------------------
+
+There are many implementations of PROLOG, both free and commercial.  
+One implementation is GNU Prolog, which can be found at: http://www.gprolog.org/
+
+I also recommend SWI-Prolog. You can download a package to install in Linux 
+or on a Windows machine from http://www.swi-prolog.org/  
+PLEASE ALSO SEE THE MANUAL FOR SWI-PROLOG, WHICH IS EXTENSIVE.
+
+SWI-Prolog is installed on our departmental unix machines.  Login into 
+compute.cs.tamu.edu and run 'swipl'.
+
+GNU Prolog is alo installed on our departmental unix machines.  Login into 
+compute.cs.tamu.edu and run 'gprolog'.
+
+Note, there are slight differences from GProlog, http://www.gprolog.org/,
+especially involving arithmetic operators and equality.
+
+
+2. Interacting with PROLOG
+--------------------------
+
+  PROLOG is interactive, like LISP.  You can type things into it directly.
+  Once you are running PROLOG, you can quit by typing:
+
+    ?- halt.
+
+  In the rare case that you get into a situation where Prolog does not
+  give you back a new prompt (it could be in the debugger mode, or it
+  could be waiting for more input, in which case SWI-Prolog displays a
+  vertical bar), try pressing Ctrl-D.
+
+  Like LISP, programs in PROLOG are editted as independent files and
+  loaded in.  The content of PROLOG programs will be discussed below.  Each
+  time you make a change to a program, you must re-load.  The command to
+  load a file called file.pl is:
+
+    ?- consult('file.pl').
+
+  or just 
+
+    ?- [filename]. 
+
+  in SWI-Prolog, if file has the .pl extension.
+  It is customary to give PROLOG programs the .pl extension.
+
+  If you make some changes to your file and you want to re-load it into 
+  your Prolog session, you can use the command 'make' (in SWI-Prolog),
+  which will automatically re-read any files that you have previously
+  consulted which haav have been modified.
+
+    ?- make.
+
+  To enter facts and rules directly into the interpreter, try: 
+
+    ?- [user].
+
+  Type ^D when you are done, and it will return you to the command line.
+
+
+  (Note, if you do something wrong and it gives you an error message, try
+  typing 'a' for abort, which might get you back to the command prompt.)
+
+
+  3. Horn Clauses
+  ---------------
+
+  A PROLOG program consists of a sequence of Horn clauses.  Horn clauses
+  are like rules in first-order logic.  They begin with a predicate
+  called the 'head', which is the consequent of the rule.  If the rule
+  has any antecedents, then the head is followed by the symbol :- and
+  then list of antecedents separated by commas, which is called the
+  body.  Horn clauses are always terminated with a period.  Here is an
+  example that says that people who have a lot of money are rich:
+
+    rich(X) :- person(X),haveLotsOf(X,money).
+
+  The antecedents are predicates, and the arguments can be terms,
+  variables, or functions.  Any non-function term that starts with a
+  capital letter is interpreted as a variable; any non-function term
+  that starts with a lower-case letter (or a digit) is interpreted as a
+  constant.  Predicate names must start with a lower-case letter, but
+  may have upper-case letters, digits, or under-scores in them.  PROLOG
+  is case-sensitive, so be consistent.
+
+  A Horn clause without any antecedents is called a fact.  
+
+  In a rule, variables are implicitly universally quantified.
+
+  Comments in a PROLOG program begin with a % and continue to end-of-line.
+
+
+  4. Queries
+  ----------
+
+  Suppose you type in the following program as file.pl:
+
+    % this is file.pl
+    large(a).                        % two facts
+    large(b).
+    has_size(Thing) :- large(Thing). % a rule
+
+  Then you load this program into PROLOG via consult('file.pl').  Now we
+  can ask questions of the knowledge base.  Queries are typed into the
+  command line as a comma-separated list of predicates (called goals),
+  which is interpreted as a conjunction.  PROLOG tries to prove each
+goal in turn by either looking up facts directly, or back-chaining
+through rules.  If it succeeds, it returns Yes.  If it cannot find a
+proof, it returns No.
+
+When there are variables in the query, there are often multiple
+solutions possible.  If PROLOG can prove the query in this case, it
+returns a binding list (or unifier or substitution) for any variables
+in the query that became instantiated in the proof.  Then PROLOG waits
+for an indication from the user of what to do next.  If the user
+presses Enter, PROLOG returns to the interactive prompt.  However, if
+the user presses ; then PROLOG will use back-tracking to attempt to
+find another solution via an alternative proof, and the whole process
+iterates.
+
+Here is a transcript that shows PROLOG returning answers to various
+queries, given the above knowledge base...
+
+  ?- large(a).
+  Yes
+
+  ?- large(c).
+  No
+
+  ?- large(V).
+  V = a ;
+  V = b ;
+  No
+
+  ?- has_size(a).
+  Yes
+
+  ?- has_size(V).
+  V = a ;
+  V = b ;
+  No
+
+5. Negation
+-----------
+
+An interesting capability that PROLOG adds over real Horn clauses in
+first-order logic is the use of negation (true Horn clauses can't have
+negated antecedents).  Antecedents in a rule may be preceeded with the
+symbol 'not', such as 'not P(X)'.  (Note: '\+' is the operator for
+'not' in SWI-Prolog; see the example below.)  When such a goal in
+encountered during the process of proving a query, an attempt is made
+to prove the predicate P(X) by itself first.  If the proof succeeds,
+the the goal of 'not P(X)' will fail and PROLOG will be forced to
+back-track.  If P(X) fails, then the goal of 'not P(X)' will succeed,
+and the original proof will move on to trying to prove the next goal.
+This procedural description of how negation works differs from the
+semantics of true negation in first-order logic.  This
+"negation-as-failure" approach leads to certain conclusions that would
+not be entailed by first-order model theory.  In particular, it leads
+to an assumption that anything that is not explicitly stated or
+provable is false, which is called the closed world assumption (CWA).
+It is important to keep in mind the different meaning of 'not', but
+usually it can be used in PROLOG effectively because its
+interpretation is often close to the intended usage in many domains.
+Here is an example that uses negation to state that all birds except
+for opus can fly:
+
+  canary(tweety).
+  penguin(opus).
+  owl(hedwig).
+  bird(X) :- tweety(X).
+  bird(X) :- penquin(X).
+  bird(X) :- owl(X).
+
+  %%% note: '\+' is the operator for 'not' in SWI-Prolog
+  %%% so this rule says that anything that is a bird but NOT a penguin can fly
+  can_fly(X) :- bird(X),\+ penguin(X). 
+
+  ?- can_fly(tweety).
+  Yes
+  ?- can_fly(opus).
+  No
+
+6. Lists
+--------
+
+PROLOG has some special syntax for manipulating lists.  Lists can be
+used as terms in predicates or functions.  A list is bounded by square
+brackets and contains a comma-separated list of member terms, for
+example [a,b,c].  The empty list is simply represented by [].  PROLOG
+has some built-in predicates pertaining to lists.  For example,
+member(X,Y) is true whenever X is a member of the list Y, and
+intersection(X,Y,Z) can be used to compute the intersection of X and Y
+(if you specify) them, which will be returned as the binding to Z (if
+you give it as a variable in a query).
+
+  ?- member(b,[a,b,c]).
+  Yes
+
+  ?- intersection([a,b,c,d],[d,e,a,f],U).
+  U = [a, d] 
+
+PROLOG is also able to de-construct lists into heads and tails (like
+car and cdr in LISP, or first and rest).  Within a list, a vertical
+line is used to separate the car from the cdr.  This is most often
+used with two variables, which, when unified with a list, will be
+bound to the first element and the rest of the list, respectively.
+For example:
+
+  shopping_list([milk,eggs,bread,butter]). % a fact added to file.pl
+  
+  ?- shopping_list([X|Y]).
+  X = milk
+  Y = [eggs, bread, butter] 
+
+Using this notation, you can actually redefine the member function
+in the following way:
+
+  % anything is a member of a list in which it is the first element
+  my_member(X,[X|Y]). 
+  % otherwise, check to see if it is a member of the rest of the list
+  my_member(X,[Y|Z]) :- my_member(X,Z). 
+
+7. Arithmetic
+-------------
+
+PROLOG can be made to do some simple arithmetic.  Use 'is' to bind
+a variable to the result of some evaluated expression.  For example,
+
+  next(X,Y) :- Y is X+1.
+
+  ?- next(5,C).
+  C=6
+
+However, PROLOG's ability to manipulate arithmetic is pretty weak.
+For example, it won't allow you to solve such a goal when X is
+unbound.  For example, we would like next(D,9) to return D=8, but
+PROLOG just invokes an error.  More powerful PROLOG-like systems
+called constraint-logic programming (CLP) languages are capable of
+solving more general problems like this.  But PROLOG's limited
+arithmetic capabilities are still useful in some situations.  You can
+also do subtraction, multiplication, and division.
+
+PROLOG can also test for equalities and inequalities.
+For example, to determine if a number is odd, you could see whether
+the number mod 2 is 1. Note that you have to do this in 2 steps,
+first compute the mod and assign it to a temp var (A), and then
+test if it is 1.
+
+  even(X) :- A is mod(X,2),A=:=0.
+  odd(X) :- A is mod(X,2),A=\=0.
+  large(B) :- size(B,S),S>100.
+
+Note that equality operators for symbols might be different.
+For example, in SWI-Prolog, to test if X equals 'table', use X==table.
+And to test if it does not, use X\==table.  "=" by itself means "unifies".
+For answers to more technical questions, see the manual for your version
+of Prolog.
+
+Arithmetic operators in GProlog:
+(for more, info see http://www.gprolog.org/manual/html_node/gprolog030.html)
+  
+is   :  evaluate expression
+=:=  :  arithmetic equal
+=\=  :  arithmetic not equal
+<    :  arithmetic less than
+=<   :  arithmetic less than or equal to
+>    :  arithmetic greater than
+>=   :  arithmetic greater than or equal to 
+
+
+8. Miscellaneous
+----------------
+
+Strings in PROLOG are enclosed in single quotes.  To print something
+to the screen, use the write() predicate with whatever argument you
+want.  It can be a string or a number.  The predicate nl (with no
+arguments) prints a new line.  Various PROLOG's may have more
+sophisticated output routines, similar to LISP's format function.
+Instead of '\' like in C or '%' in python, the escape codes used in
+Prolog are prefixed by '~'.  '~n' means new line.  You can also
+include a LIST (in brackets) of values to be filled in.  '~w' is a
+generic format for args that are strings.  '~f' is for floats.  You
+can control field width, precision, etc.  See the manual for details.
+
+  ?- format('hello~ngoodbye').
+  hello
+  goodbye
+  true
+
+  ?- format('~w=~2f',['pi',3.1415927]).
+  pi=3.14
+  true
+
+There is also a 'trace' facility in most versions of Prolog, which can
+be used to monitor the goal stack, variable binding (unification), and
+show which predicates succeed or fail during back-tracking.
+e.g. trace(fact) or trace(fact(5,X)).  This can be useful for
+debugging.  See the manual for details.
+
+  ?- trace.
+  [trace] ?- fact(3,N).
+  Call: (6) fact(3, _G2150) ?  (hit enter to step through the backchaining; see manual for other commands too)
+  ...
+  [trace] ?- nodebug.  (when you are done, type this command to get out of trace mode)
+  ?-
+
+By the way, PROLOG programs can also be compiled to run more
+efficiently.  There is also a foreign-function interface (FFI), so you
+can connect Prolog to another process and call it to do queries
+remotely.  This can allow you to incorporate logic-based reasoning and
+inference in another program.
